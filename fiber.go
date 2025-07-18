@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"github.com/gofiber/fiber/v2"
+	"github.com/google/uuid"
 
 	"gorm.io/driver/sqlite"
 	"gorm.io/gorm"
@@ -45,7 +46,9 @@ func main() {
 
 	api := app.Group("/api/v1")
 
+	api.Get("/accounts", getAccounts)
 	api.Post("/accounts", newAccount)
+	api.Delete("/accounts/:id", deleteAccount)
 
 	app.Listen("0.0.0.0:3001")
 }
@@ -82,7 +85,7 @@ func newAccount(c *fiber.Ctx) error {
 
 	// create object
 	account := Account{
-		ID:      1, //TODO: generate ID key
+		ID:      uuid.New(),
 		Name:    request.Name,
 		Balance: request.Balance,
 	}
@@ -91,7 +94,7 @@ func newAccount(c *fiber.Ctx) error {
 	if err := db.Create(&account).Error; err != nil {
 		log.Printf("Server failed to create account: %v", err)
 		return c.Status(http.StatusInternalServerError).JSON(fiber.Map{
-			"error": "Database error",
+			"error":   "Database error",
 			"message": "Failed to create account",
 		})
 	}
@@ -101,5 +104,88 @@ func newAccount(c *fiber.Ctx) error {
 	return c.Status(http.StatusCreated).JSON(fiber.Map{
 		"message": "Account created successfully",
 		"account": account,
+	})
+}
+
+// url: GET /api/v1/accounts
+func getAccounts(c *fiber.Ctx) error {
+	var accounts []Account
+
+	if err := db.Find(&accounts).Error; err != nil {
+		log.Printf("Failed to fetch accounts: %v", err)
+		return c.Status(http.StatusInternalServerError).JSON(fiber.Map{
+			"error": "Database error",
+			"message": "Failed to fetch accounts",
+		})
+	}
+
+	return c.JSON(fiber.Map{
+		"success": true,
+		"accounts": accounts,
+		"count": len(accounts),
+	})
+}
+
+// url: DELETE /api/v1/accounts/:id
+func deleteAccount(c *fiber.Ctx) error {
+	id := c.Params("id")
+
+	accountUUID, err := uuid.Parse(id)
+	if err != nil {
+		return c.Status(http.StatusBadRequest).JSON(fiber.Map{
+			"error": "Invalid account ID",
+			"message": "Account ID must be a valid UUID",
+		})
+	}
+
+	var account Account
+	if err := db.First(&account, accountUUID).Error; err != nil {
+		if err == gorm.ErrRecordNotFound {
+			return c.Status(http.StatusNotFound).JSON(fiber.Map{
+				"error": "Not found",
+				"message": "Account not found",
+			})
+		}
+		log.Printf("Failed to fetch account for deletion: %v", err)
+		return c.Status(http.StatusInternalServerError).JSON(fiber.Map{
+			"error": "Database error",
+			"message": "Failed to fetch account",
+		})
+	}
+
+	var transactionCount int64
+	db.Model(&Transaction{}).Where("account_id = ?", accountUUID).Count(&transactionCount)
+
+	err = db.Transaction(func(tx *gorm.DB) error {
+		if transactionCount > 0 {
+			if err := tx.Where("account_id = ?", accountUUID).Delete(&Transaction{}).Error; err != nil {
+				return err
+			}
+		}
+
+		if err := tx.Delete(&account).Error; err != nil {
+			return err
+		}
+
+		return nil
+	})
+
+	if err != nil {
+		return c.Status(http.StatusInternalServerError).JSON(fiber.Map{
+			"error": "Database error",
+			"message": "Failed to delete account",
+		})
+	}
+
+	log.Printf("Deleted account: %s (%s) with %d transactions", account.Name, account.ID, transactionCount)
+
+	return c.JSON(fiber.Map{
+		"success": true,
+		"message": "Account deleted successfully",
+		"deleted_account": fiber.Map{
+			"id": account.ID,
+			"name": account.Name,
+		},
+		"deleted_transactions": transactionCount,
 	})
 }
