@@ -12,6 +12,9 @@ type Account struct {
 	ID      uuid.UUID `json:"id" gorm:"primaryKey"`
 	Name    string    `json:"name" gorm:"not null"`
 	Balance float32   `json:"balance" gorm:"default:0"`
+
+	// Relationship
+	History []Transaction `json:"history,omitempty"`
 }
 
 type Request_newAccount struct {
@@ -28,6 +31,9 @@ type Transaction struct {
 	Date      time.Time `json:"date" gorm:"not null"`
 	Amount    float32   `json:"amount" gorm:"not null"`
 	Note      string    `json:"note"`
+
+	// Foreign key
+	Account Account `json:"account,omitempty" gorm:"foreignKey:AccountID"`
 }
 
 type Request_newTransaction struct {

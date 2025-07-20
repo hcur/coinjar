@@ -29,7 +29,7 @@ func createDatabase() {
 		log.Fatal("Server failed to connect to database: ", err)
 	}
 
-	if err := db.AutoMigrate(&Account{}); err != nil {
+	if err := db.AutoMigrate(&Account{}, &Transaction{}); err != nil {
 		log.Fatal("Failed to connect to database: ", err)
 	}
 
@@ -46,9 +46,13 @@ func main() {
 
 	api := app.Group("/api/v1")
 
+	// accounts
 	api.Get("/accounts", getAccounts)
 	api.Post("/accounts", newAccount)
 	api.Delete("/accounts/:id", deleteAccount)
+
+	// transaction
+	api.Post("/transaction/add", addTransaction)
 
 	app.Listen("0.0.0.0:3001")
 }
@@ -88,6 +92,7 @@ func newAccount(c *fiber.Ctx) error {
 		ID:      uuid.New(),
 		Name:    request.Name,
 		Balance: request.Balance,
+		History: []Transaction{},
 	}
 
 	// save to sqlite
@@ -188,4 +193,26 @@ func deleteAccount(c *fiber.Ctx) error {
 		},
 		"deleted_transactions": transactionCount,
 	})
+}
+
+// url: POST /api/v1/transactions/add
+func addTransaction(c *fiber.Ctx) error {
+	var request Request_newTransaction
+	if err := c.BodyParser(&request); err != nil {
+		return c.Status(http.StatusBadRequest).JSON(fiber.Map{
+			"error": "Invalid request body",
+			"message": err.Error(),
+		})
+	}
+
+	transaction := Transaction{
+		ID: uuid.New(),
+		AccountID: request.Account,
+		Source: request.Source,
+		Date: request.Date,
+		Amount: request.Amount,
+		Note: request.Note,
+	}
+
+	// TODO
 }
