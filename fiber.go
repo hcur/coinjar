@@ -1,6 +1,7 @@
 package main
 
 import (
+	"errors"
 	"log"
 	"net/http"
 	"os"
@@ -47,19 +48,20 @@ func main() {
 	api := app.Group("/api/v1")
 
 	// accounts
-	api.Get("/accounts", getAccounts)
-	api.Post("/accounts", newAccount)
-	api.Delete("/accounts/:id", deleteAccount)
+	api.Get("/account", getAccounts)
+	api.Post("/account", newAccount)
+	api.Delete("/account/:id", deleteAccount)
 
 	// transaction
 	api.Post("/transaction/add", addTransaction)
+	api.Delete("/transaction/delete/:id", deleteTransaction)
 
 	app.Listen("0.0.0.0:3001")
 }
 
 /* Fiber handlers */
 
-// url: /health
+// url: GET /health
 func healthCheck(c *fiber.Ctx) error {
 	return c.JSON(fiber.Map{
 		"status":    "ok",
@@ -69,7 +71,7 @@ func healthCheck(c *fiber.Ctx) error {
 	})
 }
 
-// url: POST /api/v1/accounts
+// url: POST /api/v1/account
 func newAccount(c *fiber.Ctx) error {
 	var request Request_newAccount
 	if err := c.BodyParser(&request); err != nil {
@@ -112,7 +114,7 @@ func newAccount(c *fiber.Ctx) error {
 	})
 }
 
-// url: GET /api/v1/accounts
+// url: GET /api/v1/account
 func getAccounts(c *fiber.Ctx) error {
 	var accounts []Account
 
@@ -131,7 +133,7 @@ func getAccounts(c *fiber.Ctx) error {
 	})
 }
 
-// url: DELETE /api/v1/accounts/:id
+// url: DELETE /api/v1/account/:id
 func deleteAccount(c *fiber.Ctx) error {
 	id := c.Params("id")
 
@@ -195,7 +197,7 @@ func deleteAccount(c *fiber.Ctx) error {
 	})
 }
 
-// url: POST /api/v1/transactions/add
+// url: POST /api/v1/transaction/add
 func addTransaction(c *fiber.Ctx) error {
 	var request Request_newTransaction
 	if err := c.BodyParser(&request); err != nil {
@@ -205,6 +207,19 @@ func addTransaction(c *fiber.Ctx) error {
 		})
 	}
 
+	// make sure the account referenced exists
+	var account Account
+	if err := db.First(&account, "id = ?", request.Account).Error; err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			return c.Status(404).JSON(fiber.Map{
+				"error": "Account not found",
+			})
+		}
+		return c.Status(500).JSON(fiber.Map{
+			"error": "Database error",
+		})
+	}
+	
 	transaction := Transaction{
 		ID: uuid.New(),
 		AccountID: request.Account,
@@ -214,5 +229,57 @@ func addTransaction(c *fiber.Ctx) error {
 		Note: request.Note,
 	}
 
-	// TODO
+	// save to database
+	if err := db.Create(&transaction).Error; err != nil {
+		return c.Status(500).JSON(fiber.Map{
+			"error": "Failed to create transaction",
+		})
+	}
+
+	// saved to database; update account balance
+	account.Balance += transaction.Amount;
+	if err := db.Save(&account).Error; err != nil {
+		return c.Status(500).JSON(fiber.Map{
+			"error": "Failed to update account balance",
+		})
+	}
+
+	return c.Status(201).JSON(transaction);
+}
+
+// url: DELETE /api/v1/transaction/:id
+func deleteTransaction(c *fiber.Ctx) error {
+	transactionID := c.Params("id")
+
+	transactionUUID, err := uuid.Parse(transactionID)
+	if err != nil {
+		return c.Status(http.StatusBadRequest).JSON(fiber.Map{
+			"error": "Invalid account ID",
+			"message": "Account ID must be a valid UUID",
+		})
+	}
+
+	// delete transaction from db
+	var transaction Transaction
+	if err := db.First(&transaction, transactionUUID).Error; err != nil {
+		if err == gorm.ErrRecordNotFound {
+			return c.Status(http.StatusNotFound).JSON(fiber.Map{
+				"error": "Not found",
+				"message": "Transaction not found",
+			})
+		}
+		log.Printf("Failed to fetch transaction for deletion: %v", err)
+		return c.Status(http.StatusInternalServerError).JSON(fiber.Map{
+			"error": "Database error",
+			"message": "Failed to fetch transaction",
+		})
+	}
+
+	if err := db.Delete(&Transaction{}, "id = ?", transactionUUID); err != nil {
+		return c.Status(500).JSON(fiber.Map{
+			"error": "Failed to delete transaction",
+		})
+	}
+
+	return c.Status(204).Send(nil)
 }
