@@ -1,6 +1,6 @@
 import axios from 'axios';
 
-const api_url = 'http://localhost:3001';
+const api_url = 'http://localhost:3001/api/v1';
 
 /* Account */
 
@@ -27,9 +27,9 @@ export interface Transaction {
 }
 
 export interface Request_newTransaction {
-    account: string;
+    account: string; // UUID string
     source: string;
-    date: string;
+    date: string; // Keep as string for form input, convert to Date in component
     amount: number;
     note: string;
 }
@@ -42,15 +42,15 @@ const api = axios.create({
 });
 
 export const accountsApi = {
-    getAll: () => api.get<Account[]>('/accounts'),
-    getById: (id: string) => api.get<Account>('/accounts/${id}'),
-    create: (data: Request_newTransaction) => api.post<Account>('/accounts', data),
-    delete: (id: string) => api.delete('/accounts/${id}'),
+    getAll: () => api.get<{success: boolean, accounts: Account[], count: number}>('/account'),
+    getById: (id: string) => api.get<Account>(`/account/${id}`),
+    create: (data: Request_newAccount) => api.post<Account>('/account', data),
+    delete: (id: string) => api.delete(`/account/${id}`),
 };
 
 export const transactionsApi = {
-    create: (data: Request_newTransaction) => api.post<Transaction>('/transactions', data),
-    delete: (id: string) => api.delete('/transactions/${id}'),
+    create: (data: Request_newTransaction) => api.post<Transaction>('/transaction/add', data),
+    delete: (id: string) => api.delete(`/transaction/delete/${id}`),
 };
 
 export default api;

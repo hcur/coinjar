@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"github.com/gofiber/fiber/v2"
+	"github.com/gofiber/fiber/v2/middleware/cors"
 	"github.com/google/uuid"
 
 	"gorm.io/driver/sqlite"
@@ -43,6 +44,14 @@ func main() {
 	createDatabase()
 
 	app := fiber.New()
+
+	// Enable CORS
+	app.Use(cors.New(cors.Config{
+		AllowOrigins: "http://localhost:5173, http://127.0.0.1:5173",
+		AllowHeaders: "Origin, Content-Type, Accept",
+		AllowMethods: "GET, POST, PUT, DELETE",
+	}))
+
 	app.Get("/health", healthCheck)
 
 	api := app.Group("/api/v1")
@@ -121,15 +130,15 @@ func getAccounts(c *fiber.Ctx) error {
 	if err := db.Find(&accounts).Error; err != nil {
 		log.Printf("Failed to fetch accounts: %v", err)
 		return c.Status(http.StatusInternalServerError).JSON(fiber.Map{
-			"error": "Database error",
+			"error":   "Database error",
 			"message": "Failed to fetch accounts",
 		})
 	}
 
 	return c.JSON(fiber.Map{
-		"success": true,
+		"success":  true,
 		"accounts": accounts,
-		"count": len(accounts),
+		"count":    len(accounts),
 	})
 }
 
@@ -140,7 +149,7 @@ func deleteAccount(c *fiber.Ctx) error {
 	accountUUID, err := uuid.Parse(id)
 	if err != nil {
 		return c.Status(http.StatusBadRequest).JSON(fiber.Map{
-			"error": "Invalid account ID",
+			"error":   "Invalid account ID",
 			"message": "Account ID must be a valid UUID",
 		})
 	}
@@ -149,13 +158,13 @@ func deleteAccount(c *fiber.Ctx) error {
 	if err := db.First(&account, accountUUID).Error; err != nil {
 		if err == gorm.ErrRecordNotFound {
 			return c.Status(http.StatusNotFound).JSON(fiber.Map{
-				"error": "Not found",
+				"error":   "Not found",
 				"message": "Account not found",
 			})
 		}
 		log.Printf("Failed to fetch account for deletion: %v", err)
 		return c.Status(http.StatusInternalServerError).JSON(fiber.Map{
-			"error": "Database error",
+			"error":   "Database error",
 			"message": "Failed to fetch account",
 		})
 	}
@@ -179,7 +188,7 @@ func deleteAccount(c *fiber.Ctx) error {
 
 	if err != nil {
 		return c.Status(http.StatusInternalServerError).JSON(fiber.Map{
-			"error": "Database error",
+			"error":   "Database error",
 			"message": "Failed to delete account",
 		})
 	}
@@ -190,7 +199,7 @@ func deleteAccount(c *fiber.Ctx) error {
 		"success": true,
 		"message": "Account deleted successfully",
 		"deleted_account": fiber.Map{
-			"id": account.ID,
+			"id":   account.ID,
 			"name": account.Name,
 		},
 		"deleted_transactions": transactionCount,
@@ -202,7 +211,7 @@ func addTransaction(c *fiber.Ctx) error {
 	var request Request_newTransaction
 	if err := c.BodyParser(&request); err != nil {
 		return c.Status(http.StatusBadRequest).JSON(fiber.Map{
-			"error": "Invalid request body",
+			"error":   "Invalid request body",
 			"message": err.Error(),
 		})
 	}
@@ -219,14 +228,14 @@ func addTransaction(c *fiber.Ctx) error {
 			"error": "Database error",
 		})
 	}
-	
+
 	transaction := Transaction{
-		ID: uuid.New(),
+		ID:        uuid.New(),
 		AccountID: request.Account,
-		Source: request.Source,
-		Date: request.Date,
-		Amount: request.Amount,
-		Note: request.Note,
+		Source:    request.Source,
+		Date:      request.Date,
+		Amount:    request.Amount,
+		Note:      request.Note,
 	}
 
 	// save to database
@@ -237,14 +246,14 @@ func addTransaction(c *fiber.Ctx) error {
 	}
 
 	// saved to database; update account balance
-	account.Balance += transaction.Amount;
+	account.Balance += transaction.Amount
 	if err := db.Save(&account).Error; err != nil {
 		return c.Status(500).JSON(fiber.Map{
 			"error": "Failed to update account balance",
 		})
 	}
 
-	return c.Status(201).JSON(transaction);
+	return c.Status(201).JSON(transaction)
 }
 
 // url: DELETE /api/v1/transaction/:id
@@ -254,7 +263,7 @@ func deleteTransaction(c *fiber.Ctx) error {
 	transactionUUID, err := uuid.Parse(transactionID)
 	if err != nil {
 		return c.Status(http.StatusBadRequest).JSON(fiber.Map{
-			"error": "Invalid account ID",
+			"error":   "Invalid account ID",
 			"message": "Account ID must be a valid UUID",
 		})
 	}
@@ -264,13 +273,13 @@ func deleteTransaction(c *fiber.Ctx) error {
 	if err := db.First(&transaction, transactionUUID).Error; err != nil {
 		if err == gorm.ErrRecordNotFound {
 			return c.Status(http.StatusNotFound).JSON(fiber.Map{
-				"error": "Not found",
+				"error":   "Not found",
 				"message": "Transaction not found",
 			})
 		}
 		log.Printf("Failed to fetch transaction for deletion: %v", err)
 		return c.Status(http.StatusInternalServerError).JSON(fiber.Map{
-			"error": "Database error",
+			"error":   "Database error",
 			"message": "Failed to fetch transaction",
 		})
 	}

@@ -33,7 +33,7 @@ type Transaction struct {
 	Note      string    `json:"note"`
 
 	// Foreign key
-	Account Account `json:"account,omitempty" gorm:"foreignKey:AccountID"`
+	Account Account `json:"account" gorm:"foreignKey:AccountID"`
 }
 
 type Request_newTransaction struct {
