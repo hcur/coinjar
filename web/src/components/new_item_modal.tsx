@@ -26,7 +26,8 @@ export default function NewItemModal({ isOpen, onClose, onSuccess }: NewItemModa
   // Account form state
   const [accountForm, setAccountForm] = useState<Request_newAccount>({
     name: '',
-    balance: 0
+    balance: 0,
+    type: 'checking' // Default to checking account
   });
 
   // Load accounts when modal opens
@@ -94,7 +95,8 @@ export default function NewItemModal({ isOpen, onClose, onSuccess }: NewItemModa
       // Reset form
       setAccountForm({
         name: '',
-        balance: 0
+        balance: 0,
+        type: 'checking'
       });
     } catch (err: any) {
       setError('Failed to create account');
@@ -144,11 +146,24 @@ export default function NewItemModal({ isOpen, onClose, onSuccess }: NewItemModa
                 required
               >
                 <option value="">Select an account</option>
-                {accounts.map((account) => (
-                  <option key={account.id} value={account.id}>
-                    {account.name} (${account.balance.toFixed(2)})
-                  </option>
-                ))}
+                {accounts.map((account) => {
+                  // Handle different account types
+                  if (account.type === 'brokerage') {
+                    return (
+                      <option key={account.id} value={account.id}>
+                        {account.name} (Brokerage)
+                      </option>
+                    );
+                  } else {
+                    // Checking and savings accounts have balance
+                    const cashAccount = account as any;
+                    return (
+                      <option key={account.id} value={account.id}>
+                        {account.name} (${cashAccount.balance?.toFixed(2) || '0.00'})
+                      </option>
+                    );
+                  }
+                })}
               </select>
             </div>
 
@@ -214,6 +229,28 @@ export default function NewItemModal({ isOpen, onClose, onSuccess }: NewItemModa
         {activeTab === 'account' && (
           <form onSubmit={handleAccountSubmit} className="modal-form">
             <div className="form-group">
+              <label htmlFor="accountType">Account Type</label>
+              <select
+                id="accountType"
+                value={accountForm.type}
+                onChange={(e) => {
+                  const newType = e.target.value;
+                  setAccountForm({
+                    ...accountForm, 
+                    type: newType,
+                    // Reset balance to 0 for brokerage accounts
+                    balance: newType === 'brokerage' ? 0 : accountForm.balance
+                  });
+                }}
+                required
+              >
+                <option value="checking">Checking Account</option>
+                <option value="savings">Savings Account</option>
+                <option value="brokerage">Brokerage Account</option>
+              </select>
+            </div>
+
+            <div className="form-group">
               <label htmlFor="accountName">Account Name</label>
               <input
                 type="text"
@@ -225,25 +262,28 @@ export default function NewItemModal({ isOpen, onClose, onSuccess }: NewItemModa
               />
             </div>
 
-            <div className="form-group">
-              <label htmlFor="initialBalance">Initial Balance</label>
-              <input
-                type="number"
-                id="initialBalance"
-                step="0.01"
-                value={accountForm.balance}
-                onChange={(e) => setAccountForm({...accountForm, balance: parseFloat(e.target.value)})}
-                required
-                placeholder="0.00"
-              />
-            </div>
+            {/* Only show balance for cash accounts */}
+            {(accountForm.type === 'checking' || accountForm.type === 'savings') && (
+              <div className="form-group">
+                <label htmlFor="initialBalance">Initial Balance</label>
+                <input
+                  type="number"
+                  id="initialBalance"
+                  step="0.01"
+                  value={accountForm.balance}
+                  onChange={(e) => setAccountForm({...accountForm, balance: parseFloat(e.target.value)})}
+                  required
+                  placeholder="0.00"
+                />
+              </div>
+            )}
 
             <div className="form-actions">
               <button type="button" onClick={onClose} className="btn-secondary">
                 Cancel
               </button>
               <button type="submit" className="btn-primary" disabled={loading}>
-                {loading ? 'Creating...' : 'Create Account'}
+                {loading ? 'Creating...' : `Create ${accountForm.type.charAt(0).toUpperCase() + accountForm.type.slice(1)} Account`}
               </button>
             </div>
           </form>

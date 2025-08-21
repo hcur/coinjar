@@ -1,25 +1,56 @@
 package main
 
 import (
-	"github.com/google/uuid"
-
 	"time"
+
+	"github.com/google/uuid"
 )
 
 /* Account */
 
-type Account struct {
-	ID      uuid.UUID `json:"id" gorm:"primaryKey"`
-	Name    string    `json:"name" gorm:"not null"`
-	Balance float32   `json:"balance" gorm:"default:0"`
+// Base account type
+type Account interface {
+	GetID() uuid.UUID
+	GetName() string
+	GetType() string
+}
 
-	// Relationship
-	History []Transaction `json:"history,omitempty"`
+type BaseAccount struct {
+	ID   uuid.UUID `json:"id" gorm:"primaryKey"`
+	Name string    `json:"name" gorm:"not null"`
+	Type string    `json:"type" gorm:"not null"`
+}
+
+// Specific account type
+type CashAccount struct {
+	// Base account information
+	BaseAccount
+	Balance float32       `json:"balance" gorm:"default:0"`
+	History []Transaction `json:"history,omitempty" gorm:"foreignKey:AccountID"`
+}
+
+type CheckingAccount struct {
+	CashAccount
+	RoutingNumber string `json:"routing_number"`
+	AccountNumber string `json:"account_number"`
+}
+
+type SavingsAccount struct {
+	CashAccount
+	APR         float32 `json:"apr" gorm:"default:0"`
+	Compounding int     `json:"compounding" gorm:"default:12"`
+}
+
+type BrokerageAccount struct {
+	BaseAccount
+	AccountNumber string `json:"account_number"`
+	BrokerName    string `json:"broker_name"`
 }
 
 type Request_newAccount struct {
 	Name    string  `json:"name" validate:"required"`
 	Balance float32 `json:"balance"`
+	Type    string  `json:"type" validate:"required"`
 }
 
 /* Transaction */
@@ -32,8 +63,8 @@ type Transaction struct {
 	Amount    float32   `json:"amount" gorm:"not null"`
 	Note      string    `json:"note"`
 
-	// Foreign key
-	Account Account `json:"account" gorm:"foreignKey:AccountID"`
+	// GORM will automatically handle the foreign key relationship
+	// based on the AccountID field
 }
 
 type Request_newTransaction struct {
@@ -42,4 +73,13 @@ type Request_newTransaction struct {
 	Date    time.Time `json:"date" validate:"required"`
 	Amount  float32   `json:"amount" validate:"required"`
 	Note    string    `json:"note"`
+}
+
+/* Asset */
+
+type Asset struct {
+	ID        uuid.UUID `json:"id" gorm:"primaryKey"`
+	AccountID uuid.UUID `json:"account_id" gorm:"type:uuid;not null"`
+	Ticker    string    `json:"ticker"`
+	Quantity  int       `json:"quantity" gorm:"default:1"`
 }

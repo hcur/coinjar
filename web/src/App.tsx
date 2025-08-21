@@ -3,6 +3,7 @@ import './App.css'
 import AccountsList from './components/accounts_list'
 import Welcome from './components/welcome'
 import NewItemModal from './components/new_item_modal'
+import TransactionList from './components/transaction_list'
 
 function App() {
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -25,9 +26,7 @@ function App() {
           <AccountsList key={refreshKey} />
         </div>
         <div className="right-column">
-          <div className="transaction-list-placeholder">
-            Transaction List Component (Coming Soon)
-          </div>
+          <TransactionList />
         </div>
       </div>
       
