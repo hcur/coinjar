@@ -115,10 +115,11 @@ func newAccount(c *fiber.Ctx) error {
 		checkingAccount := &CheckingAccount{
 			CashAccount: CashAccount{
 				BaseAccount: BaseAccount{
-					ID:       uuid.New(),
-					Name:     request.Name,
-					Type:     request.Type,
-					Category: ASSET,
+					ID:        uuid.New(),
+					Name:      request.Name,
+					Type:      request.Type,
+					Category:  ASSET,
+					CreatedAt: time.Now(),
 				},
 				Balance: request.Balance,
 			},
@@ -130,10 +131,11 @@ func newAccount(c *fiber.Ctx) error {
 		savingsAccount := &SavingsAccount{
 			CashAccount: CashAccount{
 				BaseAccount: BaseAccount{
-					ID:       uuid.New(),
-					Name:     request.Name,
-					Type:     request.Type,
-					Category: ASSET,
+					ID:        uuid.New(),
+					Name:      request.Name,
+					Type:      request.Type,
+					Category:  ASSET,
+					CreatedAt: time.Now(),
 				},
 				Balance: request.Balance,
 			},
@@ -147,10 +149,11 @@ func newAccount(c *fiber.Ctx) error {
 		creditAccount := &CreditAccount{
 			CashAccount: CashAccount{
 				BaseAccount: BaseAccount{
-					ID:       uuid.New(),
-					Name:     request.Name,
-					Type:     request.Type,
-					Category: DEBT,
+					ID:        uuid.New(),
+					Name:      request.Name,
+					Type:      request.Type,
+					Category:  DEBT,
+					CreatedAt: time.Now(),
 				},
 				Balance: request.Balance,
 			},
@@ -161,10 +164,11 @@ func newAccount(c *fiber.Ctx) error {
 	case "brokerage":
 		brokerageAccount := &BrokerageAccount{
 			BaseAccount: BaseAccount{
-				ID:       uuid.New(),
-				Name:     request.Name,
-				Type:     request.Type,
-				Category: ASSET,
+				ID:        uuid.New(),
+				Name:      request.Name,
+				Type:      request.Type,
+				Category:  ASSET,
+				CreatedAt: time.Now(),
 			},
 		}
 		account = brokerageAccount

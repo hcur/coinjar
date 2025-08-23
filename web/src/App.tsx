@@ -1,9 +1,7 @@
 import { useState } from 'react'
 import './App.css'
-import AccountsList from './components/accounts_list'
-import Welcome from './components/welcome'
 import NewItemModal from './components/new_item_modal'
-import TransactionList from './components/transaction_list'
+import Dashboard from './components/dashboard'
 
 function App() {
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -20,15 +18,7 @@ function App() {
 
   return (
     <>
-      <div className="main-layout">
-        <div className="left-column">
-          <Welcome userName="Hayden"/>
-          <AccountsList key={refreshKey} />
-        </div>
-        <div className="right-column">
-          <TransactionList />
-        </div>
-      </div>
+      <Dashboard userName="Hayden" refreshKey={refreshKey} />
       
       {/* New Button */}
       <button 

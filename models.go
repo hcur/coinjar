@@ -8,7 +8,7 @@ import (
 
 const (
 	ASSET = 1
-	DEBT = -1
+	DEBT  = -1
 )
 
 /* Account */
@@ -22,10 +22,11 @@ type Account interface {
 }
 
 type BaseAccount struct {
-	ID   uuid.UUID `json:"id" gorm:"primaryKey"`
-	Name string    `json:"name" gorm:"not null"`
-	Type string    `json:"type" gorm:"not null"`
-	Category int   `json:"category" gorm:"not null"`
+	ID        uuid.UUID `json:"id" gorm:"primaryKey"`
+	Name      string    `json:"name" gorm:"not null"`
+	Type      string    `json:"type" gorm:"not null"`
+	Category  int       `json:"category" gorm:"not null"`
+	CreatedAt time.Time `json:"created_at"`
 }
 
 // Specific account type

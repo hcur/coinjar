@@ -1,8 +1,95 @@
+/* Root and Layout */
 #root {
-  max-width: 1600px;
-  margin: 0 auto;
+  margin: 24px;
   padding: 1rem;
   text-align: center;
+  width: 80%;
+}
+
+.dashboard-container {
+  margin: 24px;
+  padding: 32px;
+  min-height: 100vh;
+  box-sizing: border-box;
+  width: 100%;
+}
+
+.dashboard-header {
+  margin-bottom: 32px;
+  font-size: 1.75rem;
+  font-weight: 600;
+  text-align: left;
+}
+
+.dashboard-content {
+  padding-left: 32px;
+  width: 100%;
+}
+
+.dashboard-top {
+  display: flex;
+  gap: 96px;
+  align-items: flex-start;
+  width: 100%;
+}
+
+.dashboard-balance,
+.dashboard-ataglance {
+  flex: 1;
+  min-width: 0;
+  max-width: 100%;
+  width: 100%;
+}
+
+.dashboard-balance-line {
+  display: flex;
+  align-items: center;
+  text-align: left;
+  font-size: 1.5rem;
+  font-weight: 700;
+  margin-bottom: 16px;
+  width: 100%;
+  white-space: nowrap;
+}
+
+.dashboard-ataglance {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+}
+
+.dashboard-ataglance h3 {
+  font-size: 1.5rem;
+  font-weight: 700;
+  margin-top: 0px;
+  margin-bottom: 16px;
+  /* Remove left margin so header aligns with grid */
+  align-self: flex-start;
+}
+
+.accounts-grid {
+  margin-left: 0;
+  padding-left: 2vw;
+  width: 100%;
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 15px;
+  margin-top: 0;
+}
+
+.dashboard-bottom {
+  margin-top: 48px;
+  width: 100%;
+}
+
+.trend-line-graph {
+  height: 80px;
+  background: #181818;
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 
 /* Main Layout */
@@ -300,6 +387,7 @@
   grid-template-columns: 1fr;
   gap: 15px;
   margin-top: 0;
+  width: 100%;
 }
 
 .account-card {
@@ -310,6 +398,8 @@
   border: 1px solid #2d2d2d;
   transition: all 0.3s ease;
   cursor: pointer;
+  width: 100%;
+  max-width: 400px;
 }
 
 .account-card:hover {
@@ -331,6 +421,7 @@
   color: #e1e5e9;
   margin: 0;
   flex: 1;
+  text-align: left;
 }
 
 .account-balance-section {
