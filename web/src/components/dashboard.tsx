@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import type { Account, Transaction } from '../api';
 import { accountsApi, transactionsApi } from '../api';
+import TransactionList from './transaction_list';
 
 // Placeholder for a trend line graph
 function TrendLineGraph({ accounts }: { accounts: Account[] }) {
@@ -96,20 +97,7 @@ export default function Dashboard({ userName = "User", refreshKey }: { userName?
           </div>
         </div>
         <div className="dashboard-bottom">
-          <h2 style={{ textAlign: 'left', fontSize: 24, marginBottom: 16 }}>Transactions</h2>
-          <div className="transactions-list" style={{ textAlign: 'left', fontSize: 18 }}>
-            {transactions.length === 0 ? (
-              <p>No transactions found.</p>
-            ) : (
-              <ul style={{ paddingLeft: 0, listStyle: 'none', width: '100%' }}>
-                {transactions.map((tx) => (
-                  <li key={tx.id} style={{ marginBottom: 12 }}>
-                    <span>{tx.source}</span> | <span>{new Date(tx.date).toLocaleDateString()}</span> | <span>{tx.amount >= 0 ? '+' : '-'}${Math.abs(tx.amount).toFixed(2)}</span>
-                  </li>
-                ))}
-              </ul>
-            )}
-          </div>
+          <TransactionList />
         </div>
       </div>
     </div>

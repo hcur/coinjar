@@ -398,8 +398,7 @@
   border: 1px solid #2d2d2d;
   transition: all 0.3s ease;
   cursor: pointer;
-  width: 100%;
-  max-width: 400px;
+  width: 80%;
 }
 
 .account-card:hover {
@@ -458,6 +457,7 @@
   padding: 20px;
   border: 1px solid #2d2d2d;
   min-height: 400px;
+  width: 95%;
 }
 
 .transaction-list h2 {

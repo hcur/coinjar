@@ -6,14 +6,16 @@ import (
 	"github.com/google/uuid"
 )
 
+/* Constants */
+
 const (
 	ASSET = 1
 	DEBT  = -1
 )
 
+
 /* Account */
 
-// Base account type
 type Account interface {
 	GetID() uuid.UUID
 	GetName() string
@@ -21,6 +23,7 @@ type Account interface {
 	GetCategory() int
 }
 
+// Base account type implementing account interface
 type BaseAccount struct {
 	ID        uuid.UUID `json:"id" gorm:"primaryKey"`
 	Name      string    `json:"name" gorm:"not null"`
@@ -56,11 +59,6 @@ type BrokerageAccount struct {
 	Positions []Asset `json:"positions" gorm:"foreignKey:AccountID"`
 }
 
-type Request_newAccount struct {
-	Name    string  `json:"name" validate:"required"`
-	Balance float32 `json:"balance"`
-	Type    string  `json:"type" validate:"required"`
-}
 
 /* Transaction */
 
@@ -76,14 +74,6 @@ type Transaction struct {
 	// based on the AccountID field
 }
 
-type Request_newTransaction struct {
-	Account uuid.UUID `json:"account" validate:"required"`
-	Source  string    `json:"source" validate:"required"`
-	Date    time.Time `json:"date" validate:"required"`
-	Amount  float32   `json:"amount" validate:"required"`
-	Note    string    `json:"note"`
-}
-
 /* Asset */
 
 type Asset struct {
@@ -91,4 +81,24 @@ type Asset struct {
 	AccountID uuid.UUID `json:"account_id" gorm:"type:uuid;not null"`
 	Ticker    string    `json:"ticker"`
 	Quantity  int       `json:"quantity" gorm:"default:1"`
+	Price     float32   `json:"price" gorm:"default:0"`
+	Yield     float32   `json:"yield" gorm:"default:0"`
+}
+
+
+/* === REQUESTS === */
+
+type Request_newAccount struct {
+	Name    string  `json:"name" validate:"required"`
+	Balance float32 `json:"balance"`
+	Type    string  `json:"type" validate:"required"`
+}
+
+
+type Request_newTransaction struct {
+	Account uuid.UUID `json:"account" validate:"required"`
+	Source  string    `json:"source" validate:"required"`
+	Date    time.Time `json:"date" validate:"required"`
+	Amount  float32   `json:"amount" validate:"required"`
+	Note    string    `json:"note"`
 }

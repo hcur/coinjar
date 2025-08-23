@@ -90,6 +90,8 @@ export interface Asset {
     account_id: string;
     ticker: string;
     quantity: number;
+    price: number;
+    yield: number;
 }
 
 export default api;

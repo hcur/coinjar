@@ -22,6 +22,7 @@ export default function NewItemModal({ isOpen, onClose, onSuccess }: NewItemModa
     amount: 0,
     note: ''
   });
+  const [isIncome, setIsIncome] = useState(true);
 
   // Account form state
   const [accountForm, setAccountForm] = useState<Request_newAccount>({
@@ -211,10 +212,42 @@ export default function NewItemModal({ isOpen, onClose, onSuccess }: NewItemModa
                 id="amount"
                 step="0.01"
                 value={transactionForm.amount}
-                onChange={(e) => setTransactionForm({...transactionForm, amount: parseFloat(e.target.value)})}
+                onChange={(e) => {
+                  const val = parseFloat(e.target.value);
+                  setTransactionForm({
+                    ...transactionForm,
+                    amount: isIncome ? Math.abs(val) : -Math.abs(val)
+                  });
+                }}
                 required
                 placeholder="0.00"
               />
+            </div>
+
+            <div className="form-group">
+              <label>Type</label>
+              <div style={{ display: 'flex', gap: '16px', alignItems: 'center' }}>
+                <label style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+                  <input
+                    type="radio"
+                    name="transactionType"
+                    value="income"
+                    checked={isIncome}
+                    onChange={() => setIsIncome(true)}
+                  />
+                  Income
+                </label>
+                <label style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+                  <input
+                    type="radio"
+                    name="transactionType"
+                    value="expense"
+                    checked={!isIncome}
+                    onChange={() => setIsIncome(false)}
+                  />
+                  Expense
+                </label>
+              </div>
             </div>
 
             <div className="form-group">

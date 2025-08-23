@@ -45,31 +45,39 @@ export default function TransactionList() {
   return (
     <div className="transaction-list">
       <h2>Recent Transactions</h2>
-      {transactions.length === 0 ? (
-        <p className="no-transactions">No transactions found. Create your first transaction!</p>
-      ) : (
-        <div className="transactions-container">
-          {transactions.map((transaction) => (
-            <div key={transaction.id} className="transaction-item">
-              <div className="transaction-header">
-                <div className="transaction-source">{transaction.source}</div>
-                <div className="transaction-amount">
-                  <span className={transaction.amount >= 0 ? 'positive' : 'negative'}>
+      <div style={{ overflowX: 'auto' }}>
+        <table style={{ width: '100%', borderCollapse: 'collapse', marginBottom: '24px' }}>
+          <thead>
+            <tr style={{ background: '#222' }}>
+              <th style={{ textAlign: 'left', padding: '12px 16px', fontWeight: 600 }}>Source</th>
+              <th style={{ textAlign: 'left', padding: '12px 16px', fontWeight: 600 }}>Date</th>
+              <th style={{ textAlign: 'left', padding: '12px 16px', fontWeight: 600 }}>Amount</th>
+              {/* Room for extra headers */}
+              <th style={{ padding: '12px 16px' }}></th>
+              <th style={{ padding: '12px 16px' }}></th>
+            </tr>
+          </thead>
+          <tbody>
+            {transactions.map((transaction) => (
+              <tr key={transaction.id} style={{ background: '#181818', borderBottom: '1px solid #333' }}>
+                <td style={{ textAlign: 'left', padding: '12px 16px' }}>{transaction.source}</td>
+                <td style={{ textAlign: 'left', padding: '12px 16px' }}>{formatDate(transaction.date)}</td>
+                <td style={{ textAlign: 'left', padding: '12px 16px' }}>
+                  <span style={{ color: transaction.amount >= 0 ? '#4ade80' : '#f87171', fontWeight: 700 }}>
                     {formatAmount(transaction.amount)}
                   </span>
-                </div>
-              </div>
-              <div className="transaction-details">
-                <div className="transaction-account">{transaction.account?.name || 'Unknown Account'}</div>
-                <div className="transaction-date">{formatDate(transaction.date)}</div>
-              </div>
-              {transaction.note && (
-                <div className="transaction-note">{transaction.note}</div>
-              )}
-            </div>
-          ))}
-        </div>
+                </td>
+                {/* Extra columns for future headers */}
+                <td style={{ padding: '12px 16px' }}></td>
+                <td style={{ padding: '12px 16px' }}></td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+      {transactions.length === 0 && (
+        <p className="no-transactions">No transactions found. Create your first transaction!</p>
       )}
     </div>
   );
-} 
+}
