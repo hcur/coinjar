@@ -27,7 +27,8 @@ export default function NewItemModal({ isOpen, onClose, onSuccess }: NewItemModa
   const [accountForm, setAccountForm] = useState<Request_newAccount>({
     name: '',
     balance: 0,
-    type: 'checking' // Default to checking account
+    type: 'checking', // Default to checking account
+    apr: undefined
   });
 
   // Load accounts when modal opens
@@ -89,14 +90,19 @@ export default function NewItemModal({ isOpen, onClose, onSuccess }: NewItemModa
     setError(null);
 
     try {
-      await accountsApi.create(accountForm);
+      // Only send apr if type is savings
+      const payload = accountForm.type === 'savings'
+        ? accountForm
+        : { ...accountForm, apr: undefined };
+      await accountsApi.create(payload);
       onSuccess();
       onClose();
       // Reset form
       setAccountForm({
         name: '',
         balance: 0,
-        type: 'checking'
+        type: 'checking',
+        apr: undefined
       });
     } catch (err: any) {
       setError('Failed to create account');
@@ -147,11 +153,17 @@ export default function NewItemModal({ isOpen, onClose, onSuccess }: NewItemModa
               >
                 <option value="">Select an account</option>
                 {accounts.map((account) => {
-                  // Handle different account types
                   if (account.type === 'brokerage') {
                     return (
                       <option key={account.id} value={account.id}>
                         {account.name} (Brokerage)
+                      </option>
+                    );
+                  } else if (account.type === 'credit') {
+                    const creditAccount = account as any;
+                    return (
+                      <option key={account.id} value={account.id}>
+                        {account.name} (Credit, -${Math.abs(creditAccount.balance)?.toFixed(2) || '0.00'})
                       </option>
                     );
                   } else {
@@ -246,6 +258,7 @@ export default function NewItemModal({ isOpen, onClose, onSuccess }: NewItemModa
               >
                 <option value="checking">Checking Account</option>
                 <option value="savings">Savings Account</option>
+                <option value="credit">Credit Account</option>
                 <option value="brokerage">Brokerage Account</option>
               </select>
             </div>
@@ -262,8 +275,8 @@ export default function NewItemModal({ isOpen, onClose, onSuccess }: NewItemModa
               />
             </div>
 
-            {/* Only show balance for cash accounts */}
-            {(accountForm.type === 'checking' || accountForm.type === 'savings') && (
+            {/* Only show balance for cash accounts (checking, savings, credit) */}
+            {(accountForm.type === 'checking' || accountForm.type === 'savings' || accountForm.type === 'credit') && (
               <div className="form-group">
                 <label htmlFor="initialBalance">Initial Balance</label>
                 <input
@@ -273,7 +286,24 @@ export default function NewItemModal({ isOpen, onClose, onSuccess }: NewItemModa
                   value={accountForm.balance}
                   onChange={(e) => setAccountForm({...accountForm, balance: parseFloat(e.target.value)})}
                   required
-                  placeholder="0.00"
+                  placeholder={accountForm.type === 'credit' ? "0.00 (debt)" : "0.00"}
+                />
+              </div>
+            )}
+
+            {/* Interest Rate for Savings Accounts */}
+            {accountForm.type === 'savings' && (
+              <div className="form-group">
+                <label htmlFor="interestRate">Interest Rate (APR %)</label>
+                <input
+                  type="number"
+                  id="interestRate"
+                  step="0.01"
+                  min="0"
+                  value={accountForm.apr ?? ''}
+                  onChange={(e) => setAccountForm({ ...accountForm, apr: parseFloat(e.target.value) })}
+                  required
+                  placeholder="e.g., 2.5"
                 />
               </div>
             )}
@@ -291,4 +321,4 @@ export default function NewItemModal({ isOpen, onClose, onSuccess }: NewItemModa
       </div>
     </div>
   );
-} 
+}

@@ -6,6 +6,11 @@ import (
 	"github.com/google/uuid"
 )
 
+const (
+	ASSET = 1
+	DEBT = -1
+)
+
 /* Account */
 
 // Base account type
@@ -13,12 +18,14 @@ type Account interface {
 	GetID() uuid.UUID
 	GetName() string
 	GetType() string
+	GetCategory() int
 }
 
 type BaseAccount struct {
 	ID   uuid.UUID `json:"id" gorm:"primaryKey"`
 	Name string    `json:"name" gorm:"not null"`
 	Type string    `json:"type" gorm:"not null"`
+	Category int   `json:"category" gorm:"not null"`
 }
 
 // Specific account type
@@ -31,20 +38,20 @@ type CashAccount struct {
 
 type CheckingAccount struct {
 	CashAccount
-	RoutingNumber string `json:"routing_number"`
-	AccountNumber string `json:"account_number"`
+}
+
+type CreditAccount struct {
+	CashAccount
 }
 
 type SavingsAccount struct {
 	CashAccount
-	APR         float32 `json:"apr" gorm:"default:0"`
-	Compounding int     `json:"compounding" gorm:"default:12"`
+	InterestRate float32 `json:"interest_rate" gorm:"default:0"`
+	Compounding  int     `json:"compounding" gorm:"default:12"`
 }
 
 type BrokerageAccount struct {
 	BaseAccount
-	AccountNumber string `json:"account_number"`
-	BrokerName    string `json:"broker_name"`
 }
 
 type Request_newAccount struct {

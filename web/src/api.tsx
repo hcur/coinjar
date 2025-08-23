@@ -30,12 +30,15 @@ export interface BrokerageAccount extends BaseAccount {
     broker_name?: string;
 }
 
-export type Account = CheckingAccount | SavingsAccount | BrokerageAccount;
+export interface CreditAccount extends CashAccount {}
+
+export type Account = CheckingAccount | SavingsAccount | CreditAccount | BrokerageAccount;
 
 export interface Request_newAccount {
     name: string;
     balance: number;
     type: string;
+    apr?: number; // Annual Percentage Rate for savings accounts
 }
 
 /* Transaction */

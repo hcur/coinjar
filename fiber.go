@@ -30,7 +30,7 @@ func createDatabase() {
 		log.Fatal("Server failed to connect to database: ", err)
 	}
 
-	if err := db.AutoMigrate(&CheckingAccount{}, &SavingsAccount{}, &BrokerageAccount{}, &Transaction{}, &Asset{}); err != nil {
+	if err := db.AutoMigrate(&CheckingAccount{}, &SavingsAccount{}, &CreditAccount{}, &BrokerageAccount{}, &Transaction{}, &Asset{}); err != nil {
 		log.Fatal("Failed to connect to database: ", err)
 	}
 
@@ -115,14 +115,13 @@ func newAccount(c *fiber.Ctx) error {
 		checkingAccount := &CheckingAccount{
 			CashAccount: CashAccount{
 				BaseAccount: BaseAccount{
-					ID:   uuid.New(),
-					Name: request.Name,
-					Type: request.Type,
+					ID:       uuid.New(),
+					Name:     request.Name,
+					Type:     request.Type,
+					Category: ASSET,
 				},
 				Balance: request.Balance,
 			},
-			RoutingNumber: "", // Will be set later if needed
-			AccountNumber: "", // Will be set later if needed
 		}
 		account = checkingAccount
 		err = db.Create(checkingAccount).Error
@@ -131,27 +130,42 @@ func newAccount(c *fiber.Ctx) error {
 		savingsAccount := &SavingsAccount{
 			CashAccount: CashAccount{
 				BaseAccount: BaseAccount{
-					ID:   uuid.New(),
-					Name: request.Name,
-					Type: request.Type,
+					ID:       uuid.New(),
+					Name:     request.Name,
+					Type:     request.Type,
+					Category: ASSET,
 				},
 				Balance: request.Balance,
 			},
-			APR:         0.0, // Default APR
-			Compounding: 12,  // Default to monthly compounding
+			InterestRate: 0.0, // Default interest rate
+			Compounding:  12,  // Default to monthly compounding
 		}
 		account = savingsAccount
 		err = db.Create(savingsAccount).Error
 
+	case "credit":
+		creditAccount := &CreditAccount{
+			CashAccount: CashAccount{
+				BaseAccount: BaseAccount{
+					ID:       uuid.New(),
+					Name:     request.Name,
+					Type:     request.Type,
+					Category: DEBT,
+				},
+				Balance: request.Balance,
+			},
+		}
+		account = creditAccount
+		err = db.Create(creditAccount).Error
+
 	case "brokerage":
 		brokerageAccount := &BrokerageAccount{
 			BaseAccount: BaseAccount{
-				ID:   uuid.New(),
-				Name: request.Name,
-				Type: request.Type,
+				ID:       uuid.New(),
+				Name:     request.Name,
+				Type:     request.Type,
+				Category: ASSET,
 			},
-			AccountNumber: "", // Will be set later if needed
-			BrokerName:    "", // Will be set later if needed
 		}
 		account = brokerageAccount
 		err = db.Create(brokerageAccount).Error
@@ -159,7 +173,7 @@ func newAccount(c *fiber.Ctx) error {
 	default:
 		return c.Status(http.StatusBadRequest).JSON(fiber.Map{
 			"error":   "Validation failed",
-			"message": "Invalid account type. Must be 'checking', 'savings', or 'brokerage'",
+			"message": "Invalid account type. Must be 'checking', 'savings', 'credit', or 'brokerage'",
 		})
 	}
 
@@ -184,6 +198,7 @@ func getAccounts(c *fiber.Ctx) error {
 	// We need to fetch each account type separately since they're in different tables
 	var checkingAccounts []CheckingAccount
 	var savingsAccounts []SavingsAccount
+	var creditAccounts []CreditAccount
 	var brokerageAccounts []BrokerageAccount
 
 	// Fetch all account types
@@ -197,6 +212,14 @@ func getAccounts(c *fiber.Ctx) error {
 
 	if err := db.Find(&savingsAccounts).Error; err != nil {
 		log.Printf("Failed to fetch savings accounts: %v", err)
+		return c.Status(http.StatusInternalServerError).JSON(fiber.Map{
+			"error":   "Database error",
+			"message": "Failed to fetch accounts",
+		})
+	}
+
+	if err := db.Find(&creditAccounts).Error; err != nil {
+		log.Printf("Failed to fetch credit accounts: %v", err)
 		return c.Status(http.StatusInternalServerError).JSON(fiber.Map{
 			"error":   "Database error",
 			"message": "Failed to fetch accounts",
@@ -217,6 +240,9 @@ func getAccounts(c *fiber.Ctx) error {
 		allAccounts = append(allAccounts, acc)
 	}
 	for _, acc := range savingsAccounts {
+		allAccounts = append(allAccounts, acc)
+	}
+	for _, acc := range creditAccounts {
 		allAccounts = append(allAccounts, acc)
 	}
 	for _, acc := range brokerageAccounts {
@@ -261,6 +287,16 @@ func deleteAccount(c *fiber.Ctx) error {
 		if err := db.First(&savingsAccount, accountUUID).Error; err == nil {
 			account = savingsAccount
 			accountType = "savings"
+			found = true
+		}
+	}
+
+	// Try credit accounts
+	if !found {
+		var creditAccount CreditAccount
+		if err := db.First(&creditAccount, accountUUID).Error; err == nil {
+			account = creditAccount
+			accountType = "credit"
 			found = true
 		}
 	}
@@ -318,6 +354,11 @@ func deleteAccount(c *fiber.Ctx) error {
 		}
 	case "savings":
 		if acc, ok := account.(SavingsAccount); ok {
+			accountID = acc.ID
+			accountName = acc.Name
+		}
+	case "credit":
+		if acc, ok := account.(CreditAccount); ok {
 			accountID = acc.ID
 			accountName = acc.Name
 		}
