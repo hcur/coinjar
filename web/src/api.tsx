@@ -9,6 +9,7 @@ export interface BaseAccount {
     name: string;
     type: string;
     category: number; // 1 = asset, -1 = debt
+    created_at: string;
 }
 
 export interface CashAccount extends BaseAccount {

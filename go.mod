@@ -3,6 +3,7 @@ module coinjar-sprint
 go 1.24.3
 
 require (
+	github.com/chewxy/math32 v1.11.1
 	github.com/gofiber/fiber/v2 v2.52.8
 	github.com/google/uuid v1.6.0
 	gorm.io/driver/sqlite v1.6.0
