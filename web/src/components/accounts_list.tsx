@@ -6,6 +6,7 @@ export default function AccountsList() {
   const [accounts, setAccounts] = useState<Account[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [balance, setBalance] = useState<number>(0);
 
   useEffect(() => {
     loadAccounts();
@@ -18,6 +19,14 @@ export default function AccountsList() {
       const response = await accountsApi.getAll();
       console.log('API response:', response);
       setAccounts(response.data.accounts);
+      const totalBalance = response.data.accounts.reduce((sum, acc) => {
+        if ('balance' in acc) {
+          return sum + (acc.category * acc.balance || 0);
+        }
+        return sum;
+      }, 0);
+      setBalance(totalBalance);
+      setError(null);
     } catch (err: any) {
       console.error('Detailed error loading accounts:', err);
       if (err.response) {
@@ -35,6 +44,10 @@ export default function AccountsList() {
 
   return (
     <div className="accounts-list">
+      <div className="accounts-summary">
+        <h2>Total Balance: ${balance.toFixed(2)}</h2>
+      </div>
+
       <h2>Your Accounts</h2>
       {accounts.length === 0 ? (
         <p>No accounts found. Create your first account!</p>
@@ -45,8 +58,10 @@ export default function AccountsList() {
               <div className="account-info">
                 <h3 className="account-name">{account.name}</h3>
                 <div className="account-balance-section">
-                  <div className="balance-amount">
-                    ${account.balance.toFixed(2)}
+                  <div className="balance-amount" style={{ color: account.category === -1 ? 'red' : 'green' }}>
+                    {'balance' in account && typeof account.balance === 'number'
+                      ? `$${account.balance.toFixed(2)}`
+                      : 'Balance N/A'}
                   </div>
                   <div className="trend-line-placeholder">
                     {/* Future trend line will go here */}

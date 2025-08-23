@@ -28,6 +28,7 @@ export default function NewItemModal({ isOpen, onClose, onSuccess }: NewItemModa
     name: '',
     balance: 0,
     type: 'checking', // Default to checking account
+    category: 1,
     apr: undefined
   });
 
@@ -102,6 +103,7 @@ export default function NewItemModal({ isOpen, onClose, onSuccess }: NewItemModa
         name: '',
         balance: 0,
         type: 'checking',
+        category: 1,
         apr: undefined
       });
     } catch (err: any) {

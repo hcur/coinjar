@@ -8,6 +8,7 @@ export interface BaseAccount {
     id: string;
     name: string;
     type: string;
+    category: number; // 1 = asset, -1 = debt
 }
 
 export interface CashAccount extends BaseAccount {
@@ -16,8 +17,7 @@ export interface CashAccount extends BaseAccount {
 }
 
 export interface CheckingAccount extends CashAccount {
-    routing_number?: string;
-    account_number?: string;
+
 }
 
 export interface SavingsAccount extends CashAccount {
@@ -26,8 +26,7 @@ export interface SavingsAccount extends CashAccount {
 }
 
 export interface BrokerageAccount extends BaseAccount {
-    account_number?: string;
-    broker_name?: string;
+    positions: Asset[];
 }
 
 export interface CreditAccount extends CashAccount {}
@@ -38,6 +37,7 @@ export interface Request_newAccount {
     name: string;
     balance: number;
     type: string;
+    category: number;
     apr?: number; // Annual Percentage Rate for savings accounts
 }
 
@@ -81,5 +81,14 @@ export const transactionsApi = {
     create: (data: Request_newTransaction) => api.post<Transaction>('/transaction/add', data),
     delete: (id: string) => api.delete(`/transaction/delete/${id}`),
 };
+
+/* Asset */
+
+export interface Asset {
+    id: string;
+    account_id: string;
+    ticker: string;
+    quantity: number;
+}
 
 export default api;

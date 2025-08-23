@@ -52,6 +52,7 @@ type SavingsAccount struct {
 
 type BrokerageAccount struct {
 	BaseAccount
+	Positions []Asset `json:"positions" gorm:"foreignKey:AccountID"`
 }
 
 type Request_newAccount struct {
