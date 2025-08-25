@@ -77,10 +77,13 @@ export const accountsApi = {
 };
 
 export const transactionsApi = {
-    getAll: () => api.get<{success: boolean, transactions: Transaction[], count: number}>('/transactions'),
-    getByAccount: (accountId: string) => api.get<{success: boolean, account: Account, transactions: Transaction[], count: number}>(`/transactions/by-account/${accountId}`),
-    create: (data: Request_newTransaction) => api.post<Transaction>('/transaction/add', data),
-    delete: (id: string) => api.delete(`/transaction/delete/${id}`),
+    getAll: (params?: { account?: string; date_query?: string }) =>
+        api.get<{ success: boolean; transactions: Transaction[]; count: number }>(
+            '/transactions',
+            { params }
+        ),
+    create: (data: Request_newTransaction) => api.post<Transaction>('/transactions', data),
+    delete: (id: string) => api.delete(`/transactions/${id}`),
 };
 
 /* Asset */

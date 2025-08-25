@@ -61,10 +61,9 @@ func main() {
 	api.Delete("/account/:id", deleteAccount)
 
 	// transaction
-	api.Get("/transactions", getAllTransactions)
-	api.Get("/transactions/by-account/:account_id", getTransactionsByAccount)
-	api.Post("/transaction/add", addTransaction)
-	api.Delete("/transaction/delete/:id", deleteTransaction)
+	api.Get("/transactions", getTransactions)
+	api.Post("/transactions", addTransaction)
+	api.Delete("/transactions/:id", deleteTransaction)
 
 	app.Listen("0.0.0.0:3001")
 }
@@ -386,80 +385,26 @@ func deleteAccount(c *fiber.Ctx) error {
 	})
 }
 
-// url: GET /api/v1/transactions
-func getAllTransactions(c *fiber.Ctx) error {
+// url: GET /api/v1/transactions/:account_id?date_query
+func getTransactions(c *fiber.Ctx) error {
+	accountParam := c.Query("account", "")
+	dateQuery := c.Query("date_query", "")
+
 	var transactions []Transaction
+	query := db.Model(&Transaction{})
 
-	// Get all transactions ordered by date (most recent first)
-	if err := db.Order("date DESC").Find(&transactions).Error; err != nil {
-		log.Printf("Failed to fetch all transactions: %v", err)
-		return c.Status(http.StatusInternalServerError).JSON(fiber.Map{
-			"error":   "Database error",
-			"message": "Failed to fetch transactions",
-		})
-	}
-
-	// Note: Account information is not preloaded here since we have multiple account types
-	// If needed, account info can be fetched separately using the AccountID
-
-	return c.JSON(fiber.Map{
-		"success":      true,
-		"transactions": transactions,
-		"count":        len(transactions),
-	})
-}
-
-// url: GET /api/v1/transactions/by-account/:account_id
-func getTransactionsByAccount(c *fiber.Ctx) error {
-	accountID := c.Params("account_id")
-
-	accountUUID, err := uuid.Parse(accountID)
-	if err != nil {
-		return c.Status(http.StatusBadRequest).JSON(fiber.Map{
-			"error":   "Invalid account ID",
-			"message": "Account ID must be a valid UUID",
-		})
-	}
-
-	// Check if account exists in any of the account tables
-	var account interface{}
-	var found bool
-
-	// Try checking accounts first
-	var checkingAccount CheckingAccount
-	if err := db.First(&checkingAccount, accountUUID).Error; err == nil {
-		account = checkingAccount
-		found = true
-	}
-
-	// Try savings accounts
-	if !found {
-		var savingsAccount SavingsAccount
-		if err := db.First(&savingsAccount, accountUUID).Error; err == nil {
-			account = savingsAccount
-			found = true
+	if accountParam != "" {
+		accountUUID, err := uuid.Parse(accountParam)
+		if err == nil {
+			query = query.Where("account_id = ?", accountUUID)
 		}
 	}
-
-	// Try brokerage accounts
-	if !found {
-		var brokerageAccount BrokerageAccount
-		if err := db.First(&brokerageAccount, accountUUID).Error; err == nil {
-			account = brokerageAccount
-			found = true
-		}
+	if dateQuery != "" {
+		query = query.Where("date(date) = ?", dateQuery)
 	}
 
-	if !found {
-		return c.Status(http.StatusNotFound).JSON(fiber.Map{
-			"error": "Account not found",
-		})
-	}
-
-	// Get transactions for this account, ordered by date (most recent first)
-	var transactions []Transaction
-	if err := db.Where("account_id = ?", accountUUID).Order("date DESC").Find(&transactions).Error; err != nil {
-		log.Printf("Failed to fetch transactions for account %s: %v", accountID, err)
+	if err := query.Order("date DESC").Find(&transactions).Error; err != nil {
+		log.Printf("Failed to fetch transactions: %v", err)
 		return c.Status(http.StatusInternalServerError).JSON(fiber.Map{
 			"error":   "Database error",
 			"message": "Failed to fetch transactions",
@@ -468,7 +413,6 @@ func getTransactionsByAccount(c *fiber.Ctx) error {
 
 	return c.JSON(fiber.Map{
 		"success":      true,
-		"account":      account,
 		"transactions": transactions,
 		"count":        len(transactions),
 	})

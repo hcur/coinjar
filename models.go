@@ -29,7 +29,7 @@ type BaseAccount struct {
 	Name      string    `json:"name" gorm:"not null"`
 	Type      string    `json:"type" gorm:"not null"`
 	Category  int       `json:"category" gorm:"not null"`
-	CreatedAt time.Time `json:"created_at"`
+	CreatedAt time.Time `json:"created_at" gorm:"not null"`
 }
 
 // Specific account type
@@ -101,4 +101,9 @@ type Request_newTransaction struct {
 	Date    time.Time `json:"date" validate:"required"`
 	Amount  float32   `json:"amount" validate:"required"`
 	Note    string    `json:"note"`
+}
+
+type Request_getTransactions struct {
+	Account uuid.UUID `json:"account"`
+	DateQuery string  `json:"date_query"`
 }
