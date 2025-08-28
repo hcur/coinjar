@@ -1,13 +1,44 @@
 import { useState, useEffect } from 'react';
-import type { Account, Transaction } from '../api';
-import { accountsApi, transactionsApi } from '../api';
+import type { Account } from '../api';
+import { accountsApi } from '../api';
 import TransactionList from './transaction_list';
+import Trendline from './trendline';
+import AccountTrendline from './account_trendline';
 
-// Placeholder for a trend line graph
+// Trend line graph showing total balance over time
 function TrendLineGraph({ accounts }: { accounts: Account[] }) {
+  // Default to showing last 3 months
+  const endDate = new Date();
+  const startDate = new Date();
+  startDate.setMonth(endDate.getMonth() - 3);
+
+  // Calculate total balance from all accounts
+  const totalBalance = accounts.reduce((sum, acc) => {
+    if ('balance' in acc) {
+      return sum + (acc.category * acc.balance || 0);
+    }
+    return sum;
+  }, 0);
+
+  // Create a virtual "total balance" account for the trendline
+  const totalBalanceAccount: Account = {
+    id: 'total-balance',
+    name: 'Total Balance',
+    type: 'total',
+    category: 1,
+    created_at: startDate.toISOString(),
+    balance: totalBalance
+  };
+
   return (
     <div className="trend-line-graph">
-      <span style={{ color: '#888' }}>[Trend line graph placeholder]</span>
+      <Trendline 
+        account={totalBalanceAccount}
+        startDate={startDate}
+        endDate={endDate}
+        width="100%"
+        height="200px"
+      />
     </div>
   );
 }
@@ -35,7 +66,6 @@ function AtAGlance({ accounts }: { accounts: Account[] }) {
 
 export default function Dashboard({ userName = "User", refreshKey }: { userName?: string, refreshKey?: number }) {
   const [accounts, setAccounts] = useState<Account[]>([]);
-  const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [balance, setBalance] = useState<number>(0);
@@ -44,12 +74,8 @@ export default function Dashboard({ userName = "User", refreshKey }: { userName?
     async function fetchData() {
       setLoading(true);
       try {
-        const [accountsRes, transactionsRes] = await Promise.all([
-          accountsApi.getAll(),
-          transactionsApi.getAll()
-        ]);
+        const accountsRes = await accountsApi.getAll();
         setAccounts(accountsRes.data.accounts);
-        setTransactions(transactionsRes.data.transactions);
         const totalBalance = accountsRes.data.accounts.reduce((sum: number, acc: any) => {
           if ('balance' in acc) {
             return sum + (acc.category * acc.balance || 0);

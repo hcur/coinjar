@@ -113,13 +113,7 @@ func newAccount(c *fiber.Ctx) error {
 	case "checking":
 		checkingAccount := &CheckingAccount{
 			CashAccount: CashAccount{
-				BaseAccount: BaseAccount{
-					ID:        uuid.New(),
-					Name:      request.Name,
-					Type:      request.Type,
-					Category:  ASSET,
-					CreatedAt: time.Now(),
-				},
+				BaseAccount: create_base_account(request),
 				Balance: request.Balance,
 			},
 		}
@@ -129,13 +123,7 @@ func newAccount(c *fiber.Ctx) error {
 	case "savings":
 		savingsAccount := &SavingsAccount{
 			CashAccount: CashAccount{
-				BaseAccount: BaseAccount{
-					ID:        uuid.New(),
-					Name:      request.Name,
-					Type:      request.Type,
-					Category:  ASSET,
-					CreatedAt: time.Now(),
-				},
+				BaseAccount: create_base_account(request),
 				Balance: request.Balance,
 			},
 			InterestRate: 0.0, // Default interest rate
@@ -147,13 +135,7 @@ func newAccount(c *fiber.Ctx) error {
 	case "credit":
 		creditAccount := &CreditAccount{
 			CashAccount: CashAccount{
-				BaseAccount: BaseAccount{
-					ID:        uuid.New(),
-					Name:      request.Name,
-					Type:      request.Type,
-					Category:  DEBT,
-					CreatedAt: time.Now(),
-				},
+				BaseAccount: create_base_account(request),
 				Balance: request.Balance,
 			},
 		}
@@ -162,13 +144,7 @@ func newAccount(c *fiber.Ctx) error {
 
 	case "brokerage":
 		brokerageAccount := &BrokerageAccount{
-			BaseAccount: BaseAccount{
-				ID:        uuid.New(),
-				Name:      request.Name,
-				Type:      request.Type,
-				Category:  ASSET,
-				CreatedAt: time.Now(),
-			},
+			BaseAccount: create_base_account(request),
 		}
 		account = brokerageAccount
 		err = db.Create(brokerageAccount).Error
@@ -527,4 +503,32 @@ func deleteTransaction(c *fiber.Ctx) error {
 	}
 
 	return c.Status(204).Send(nil)
+}
+
+/* utility functions */
+
+func create_base_account(request Request_newAccount) BaseAccount {
+	return BaseAccount{
+		ID: uuid.New(),
+		Name: request.Name,
+		Type: request.Type,
+		Category: match_category(request),
+		CreatedAt: time.Now(),
+	}
+}
+
+func match_category(request Request_newAccount) int {
+	switch (request.Type) {
+	case "credit":
+		return DEBT
+
+	case "checking":
+	case "savings":
+	case "brokerage":
+	default:
+		return ASSET
+	}
+
+	// unreachable
+	return -1;
 }
