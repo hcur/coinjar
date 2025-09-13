@@ -1,4 +1,3 @@
-import { useState, useEffect, useMemo } from 'react';
 import {
   Chart as ChartJS,
   CategoryScale,
@@ -11,8 +10,23 @@ import {
   type ChartOptions,
 } from 'chart.js';
 import { Line } from 'react-chartjs-2';
+import { useMemo } from 'react';
 import type { Account, Transaction } from '../api';
-import { transactionsApi } from '../api';
+
+// Type guard to check if account has a 'history' field (i.e., is a CashAccount or similar)
+function hasHistory(acc: Account): acc is Account & { history: Transaction[]; balance: number } {
+  return (
+    'history' in acc &&
+    Array.isArray((acc as any).history) &&
+    'balance' in acc &&
+    typeof (acc as any).balance === 'number'
+  );
+}
+
+// Add this type guard after the existing hasHistory function
+function hasBalanceData(acc: Account): acc is Account & { balanceData: { date: string; balance: number }[] } {
+  return 'balanceData' in acc && Array.isArray((acc as any).balanceData);
+}
 
 ChartJS.register(
   CategoryScale,
@@ -37,98 +51,50 @@ interface BalancePoint {
   balance: number;
 }
 
+function abbreviateThousand(balance: Number): string {
+  if (balance > 999) {
+    balance = balance / 1000;
+    balance = balance.toFixed(1);
+    return "" + balance.toString() + "K";
+  }
+  return balance.toString();
+}
+
 export default function Trendline({ 
-  account, 
-  startDate, 
+  account,
+  startDate,
   endDate, 
   width = "100%", 
   height = "300px" 
 }: TrendlineProps) {
-  const [transactions, setTransactions] = useState<Transaction[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-
-  // Fetch transactions for the account within the date range
-  useEffect(() => {
-    async function fetchTransactions() {
-      setLoading(true);
-      try {
-        const response = await transactionsApi.getAll({
-          account: account.id,
-          date_query: `${startDate.toISOString()}/${endDate.toISOString()}`
-        });
-        setTransactions(response.data.transactions);
-        setError(null);
-      } catch (err: any) {
-        setError('Failed to load transactions');
-        console.error('Error fetching transactions:', err);
-      } finally {
-        setLoading(false);
-      }
-    }
-
-    fetchTransactions();
-  }, [account.id, startDate, endDate]);
-
   // Calculate balance over time
-  const balanceData = useMemo(() => {
-    if (!transactions.length && 'balance' in account) {
-      // If no transactions, show starting balance from account creation
+  const balanceData = useMemo<BalancePoint[]>(() => {
+    // If account has pre-calculated balance data, use it directly
+    if (hasBalanceData(account)) {
+      return account.balanceData;
+    }
+    
+    // Simple fallback for accounts without balance data
+    if ('balance' in account && typeof (account as any).balance === 'number') {
       const accountCreated = new Date(account.created_at);
       return [
         {
           date: accountCreated.toISOString().split('T')[0],
-          balance: account.balance
+          balance: (account as any).balance
         }
       ];
     }
-
-    // Sort transactions by date
-    const sortedTransactions = [...transactions].sort(
-      (a, b) => new Date(a.date).getTime() - new Date(b.date).getTime()
-    );
-
-    // Calculate running balance
-    let runningBalance = 'balance' in account ? account.balance : 0;
-    const balancePoints: BalancePoint[] = [];
     
-    // Add starting balance point
-    balancePoints.push({
-      date: startDate.toISOString().split('T')[0],
-      balance: runningBalance
-    });
-
-    // Process each transaction
-    sortedTransactions.forEach(transaction => {
-      runningBalance += transaction.amount;
-      balancePoints.push({
-        date: transaction.date.split('T')[0],
-        balance: runningBalance
-      });
-    });
-
-    // Add end date point if no transactions on that date
-    const lastTransactionDate = sortedTransactions.length > 0 
-      ? sortedTransactions[sortedTransactions.length - 1].date.split('T')[0]
-      : null;
-    
-    if (lastTransactionDate !== endDate.toISOString().split('T')[0]) {
-      balancePoints.push({
-        date: endDate.toISOString().split('T')[0],
-        balance: runningBalance
-      });
-    }
-
-    return balancePoints;
-  }, [transactions, account, startDate, endDate]);
+    return [];
+  }, [account, startDate, endDate]);
 
   // Chart configuration
   const chartData = {
-    labels: balanceData.map(point => point.date),
+    labels: balanceData.map((point) => point.date),
     datasets: [
       {
-        label: `${account.name} Balance`,
-        data: balanceData.map(point => point.balance),
+        label: ``,
+        data: balanceData.map((point) => point.balance),
         borderColor: account.category === 1 ? 'rgb(34, 197, 94)' : 'rgb(239, 68, 68)',
         backgroundColor: account.category === 1 ? 'rgba(34, 197, 94, 0.1)' : 'rgba(239, 68, 68, 0.1)',
         borderWidth: 2,
@@ -145,16 +111,19 @@ export default function Trendline({
     maintainAspectRatio: false,
     plugins: {
       legend: {
-        display: true,
-        position: 'top' as const,
+        display: false,
       },
       title: {
         display: true,
-        text: `${account.name} Balance Trend`,
+        text:
+          'balance' in account && typeof (account as any).balance === 'number'
+            ? `$${Number((account as any).balance).toFixed(2)} ${account.name}`
+            : `${account.name}`,
         font: {
-          size: 16,
+          size: 20,
           weight: 'bold',
         },
+        color: '#fff',
       },
       tooltip: {
         callbacks: {
@@ -169,7 +138,6 @@ export default function Trendline({
         type: 'category',
         title: {
           display: true,
-          text: 'Date',
         },
         ticks: {
           maxTicksLimit: 8,
@@ -178,12 +146,12 @@ export default function Trendline({
       y: {
         type: 'linear',
         title: {
-          display: true,
-          text: 'Balance ($)',
+          display: false,
         },
         ticks: {
           callback: function(value) {
-            return `$${Number(value).toFixed(2)}`;
+            //return `$${Number(value).toFixed(2)}`;
+            return `$${abbreviateThousand(value)}`;
           },
         },
       },
@@ -193,22 +161,6 @@ export default function Trendline({
       mode: 'index' as const,
     },
   };
-
-  if (loading) {
-    return (
-      <div style={{ width, height, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-        <div>Loading trend data...</div>
-      </div>
-    );
-  }
-
-  if (error) {
-    return (
-      <div style={{ width, height, display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'red' }}>
-        <div>Error: {error}</div>
-      </div>
-    );
-  }
 
   return (
     <div style={{ width, height }}>

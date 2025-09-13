@@ -1,39 +1,70 @@
-import { useState, useEffect } from 'react';
-import type { Account } from '../api';
-import { accountsApi } from '../api';
+import { useState, useEffect, useMemo } from 'react';
+import type { Account, Transaction } from '../api';
+import { accountsApi, transactionsApi } from '../api';
 import TransactionList from './transaction_list';
 import Trendline from './trendline';
-import AccountTrendline from './account_trendline';
 
 // Trend line graph showing total balance over time
-function TrendLineGraph({ accounts }: { accounts: Account[] }) {
+function TrendLineGraph({ accounts, allTransactions }: { accounts: Account[], allTransactions: Transaction[] }) {
   // Default to showing last 3 months
   const endDate = new Date();
   const startDate = new Date();
-  startDate.setMonth(endDate.getMonth() - 3);
+  startDate.setMonth(endDate.getMonth() - 1);
 
-  // Calculate total balance from all accounts
-  const totalBalance = accounts.reduce((sum, acc) => {
-    if ('balance' in acc) {
-      return sum + (acc.category * acc.balance || 0);
+  // Calculate net worth over time - this is the only place we do the calculation
+  const netWorthData = useMemo(() => {
+    const dailyData: { date: string; balance: number }[] = [];
+    const currentDate = new Date(startDate);
+    
+    while (currentDate <= endDate) {
+      const dateStr = currentDate.toISOString().split('T')[0];
+      
+      // Calculate net worth for this date
+      let netWorth = 0;
+      accounts.forEach(account => {
+        if ('balance' in account) {
+          // Calculate what the balance was on this specific date
+          let historicalBalance = account.balance;
+          
+          // Subtract all transactions that happened AFTER this date
+          // (to work backwards from current balance to historical balance)
+          allTransactions.forEach(transaction => {
+            if (transaction.account_id === account.id && 
+                transaction.date.split('T')[0] > dateStr) {
+              historicalBalance -= transaction.amount;
+            }
+          });
+          
+          netWorth += account.category * historicalBalance;
+        }
+      });
+      
+      dailyData.push({
+        date: dateStr,
+        balance: netWorth
+      });
+      
+      currentDate.setDate(currentDate.getDate() + 1);
     }
-    return sum;
-  }, 0);
 
-  // Create a virtual "total balance" account for the trendline
-  const totalBalanceAccount: Account = {
-    id: 'total-balance',
-    name: 'Total Balance',
+    return dailyData;
+  }, [accounts, allTransactions, startDate, endDate]);
+
+  // Create a virtual account with pre-calculated balance data
+  const netWorthAccount: Account & { balanceData: { date: string; balance: number }[] } = {
+    id: 'net-worth',
+    name: 'net worth',
     type: 'total',
     category: 1,
     created_at: startDate.toISOString(),
-    balance: totalBalance
+    balance: netWorthData[netWorthData.length - 1]?.balance || 0,
+    balanceData: netWorthData // Pass the pre-calculated data directly
   };
 
   return (
     <div className="trend-line-graph">
       <Trendline 
-        account={totalBalanceAccount}
+        account={netWorthAccount}
         startDate={startDate}
         endDate={endDate}
         width="100%"
@@ -66,23 +97,21 @@ function AtAGlance({ accounts }: { accounts: Account[] }) {
 
 export default function Dashboard({ userName = "User", refreshKey }: { userName?: string, refreshKey?: number }) {
   const [accounts, setAccounts] = useState<Account[]>([]);
+  const [allTransactions, setAllTransactions] = useState<Transaction[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [balance, setBalance] = useState<number>(0);
 
   useEffect(() => {
     async function fetchData() {
       setLoading(true);
       try {
-        const accountsRes = await accountsApi.getAll();
+        const [accountsRes, transactionsRes] = await Promise.all([
+          accountsApi.getAll(),
+          transactionsApi.getAll()
+        ]);
+        
         setAccounts(accountsRes.data.accounts);
-        const totalBalance = accountsRes.data.accounts.reduce((sum: number, acc: any) => {
-          if ('balance' in acc) {
-            return sum + (acc.category * acc.balance || 0);
-          }
-          return sum;
-        }, 0);
-        setBalance(totalBalance);
+        setAllTransactions(transactionsRes.data.transactions);
         setError(null);
       } catch (err: any) {
         setError('Failed to load data');
@@ -92,6 +121,16 @@ export default function Dashboard({ userName = "User", refreshKey }: { userName?
     }
     fetchData();
   }, [refreshKey]);
+
+  // Calculate current net worth (removed redundant balance state)
+  const currentNetWorth = useMemo(() => {
+    return accounts.reduce((sum, acc) => {
+      if ('balance' in acc) {
+        return sum + (acc.category * acc.balance || 0);
+      }
+      return sum;
+    }, 0);
+  }, [accounts]);
 
   // Time-based greeting
   const getGreeting = () => {
@@ -112,10 +151,7 @@ export default function Dashboard({ userName = "User", refreshKey }: { userName?
       <div className="dashboard-content">
         <div className="dashboard-top">
           <div className="dashboard-balance">
-            <div className="dashboard-balance-line">
-              Your assets: ${balance.toFixed(2)}
-            </div>
-            <TrendLineGraph accounts={accounts} />
+            <TrendLineGraph accounts={accounts} allTransactions={allTransactions} />
           </div>
           <div className="dashboard-ataglance">
             <h3>At a glance:</h3>
